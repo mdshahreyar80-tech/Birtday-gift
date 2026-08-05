@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Happy Birthday Experience 🎉</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #090a0f;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Falling Rose Petals Canvas */
+    #petalCanvas, #fireworksCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #petalCanvas { z-index: 1; }
+    #fireworksCanvas { z-index: 2; }
+
+    /* 1. Cinematic Intro Screen */
+    .intro-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle, #1a0b2e 0%, #05020a 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      transition: opacity 1s ease, visibility 1s ease;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .intro-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .intro-title {
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+      letter-spacing: 2px;
+      background: linear-gradient(45deg, #ff7675, #e84393, #fd79a8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: pulse 2s infinite;
+    }
+
+    .start-btn {
+      padding: 16px 36px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #ff007f, #7928ca);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.6);
+      transition: transform 0.2s;
+    }
+
+    .start-btn:active { transform: scale(0.95); }
+
+    /* Main Container */
+    .main-wrapper {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 500px;
+      padding: 20px 16px 60px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    /* 2. 3D Gift Box */
+    .gift-section {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .gift-box {
+      width: 100px;
+      height: 100px;
+      position: relative;
+      background: #e84393;
+      margin: 20px auto;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(232, 67, 147, 0.5);
+      transition: transform 0.3s;
+    }
+
+    .gift-box:hover { transform: scale(1.08); }
+
+    .gift-lid {
+      position: absolute;
+      top: -15px; left: -5px;
+      width: 110px; height: 25px;
+      background: #ff7675;
+      border-radius: 6px;
+      transition: transform 0.5s ease;
+    }
+
+    .gift-ribbon-v {
+      position: absolute; top: 0; left: 42px; width: 16px; height: 100%; background: #fdcb6e;
+    }
+    .gift-ribbon-h {
+      position: absolute; top: 42px; left: 0; width: 100%; height: 16px; background: #fdcb6e;
+    }
+
+    .gift-box.open .gift-lid {
+      transform: translateY(-40px) rotate(-15deg);
+    }
+
+    /* 3. Balloon Burst Section */
+    .balloon-area {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 10px 0;
+    }
+
+    .balloon {
+      width: 50px;
+      height: 65px;
+      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+      cursor: pointer;
+      position: relative;
+      animation: float 3s infinite ease-in-out alternate;
+    }
+
+    .balloon::after {
+      content: ''; position: absolute; bottom: -12px; left: 50%; width: 2px; height: 12px; background: rgba(255,255,255,0.5);
+    }
+
+    .b1 { background: #ff4757; animation-delay: 0s; }
+    .b2 { background: #2ed573; animation-delay: 0.5s; }
+    .b3 { background: #1e90ff; animation-delay: 1s; }
+
+    .balloon.popped {
+      visibility: hidden;
+      transform: scale(0);
+    }
+
+    /* 4. Slideshow */
+    .slideshow-card {
+      width: 100%;
+      height: 250px;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .slide-img {
+      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; top: 0; left: 0;
+      opacity: 0; transition: opacity 1s ease-in-out;
+    }
+
+    .slide-img.active { opacity: 1; }
+
+    /* 5. Love Letter Section */
+    .love-letter {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 25px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .love-letter h2 {
+      font-size: 1.5rem; color: #fd79a8; margin-bottom: 12px; text-align: center;
+    }
+
+    .love-letter p {
+      font-size: 0.98rem; line-height: 1.7; color: #dfe6e9; text-align: justify;
+    }
+
+    /* 6. Premium Ending */
+    .premium-ending {
+      text-align: center;
+      margin-top: 10px;
+      padding: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      width: 100%;
+    }
+
+    .premium-ending h3 {
+      font-size: 1.3rem;
+      background: linear-gradient(90deg, #ffeaa7, #fdcb6e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes float { 0% { transform: translateY(0); } 100% { transform: translateY(-12px); } }
+.heart {
+  fill: #ff4757;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+  animation: pulse 1s ease infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 71, 87, 0.6));
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}  </style>
+</head>
+<body>
+
+  <!-- Audio Player (Background Music) -->
+  <audio id="bgMusic" loop src="song.mpeg"></audio>
+
+  <!-- Canvases for Petals and Fireworks -->
+  <canvas id="petalCanvas"></canvas>
+  <canvas id="fireworksCanvas"></canvas>
+
+  <!-- Intro Overlay -->
+  <div class="intro-screen" id="introScreen">
+    <div class="intro-title">A Special Celebration<br>Awaits You ✨</div>
+    <button class="start-btn" onclick="startExperience()">Tap to Open 🎁</button>
+  </div>
+
+  <!-- Main Experience Wrapper -->
+  <div class="main-wrapper">
+
+    <!-- 3D Gift Box Section -->
+    <div class="gift-section">
+      <p style="color: #a29bfe; font-size: 0.9rem; margin-bottom: 8px;">Tap the Gift Box!</p>
+      <div class="gift-box" id="giftBox" onclick="openGift()">
+        <div class="gift-lid"></div>
+        <div class="gift-ribbon-v"></div>
+        <div class="gift-ribbon-h"></div>
+      </div>
+    </div>
+
+    <!-- Balloon Bursting -->
+    <div>
+      <p style="text-align: center; color: #a29bfe; font-size: 0.9rem; margin-bottom: 12px;">Pop the Balloons! 🎈</p>
+      <div class="balloon-area">
+        <div class="balloon b1" onclick="popBalloon(this)"></div>
+        <div class="balloon b2" onclick="popBalloon(this)"></div>
+        <div class="balloon b3" onclick="popBalloon(this)"></div>
+      </div>
+    </div>
+
+    <!-- 2 Photo Slideshow -->
+    <div class="slideshow-card">
+      <img src="nusrat 2.jpeg" class="slide-img active" alt="Slide 1">
+    </div>
+
+    <!-- Love Letter -->
+    <div class="love-letter">
+      <h2>Dear Special One 💌</h2>
+      <p>
+      <div style="text-align: center; margin-bottom: 10px;">
+  <svg class="heart" viewBox="0 0 32 29.6">
+    <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,16,21.2,16,21.2s16-11.8,16-21.2C32,3.8,28.2,0,23.6,0z"/>
+  </svg>
+</div>
+       💖 Happy Birthday to one of the most precious people in my heart! 🎉🎂
+      </p>
+    </div>
+
+    <!-- Premium Ending Banner -->
+    <div class="premium-ending">
+      <h3>Forever & Always ✨</h3>
+      <p style="font-size: 0.85rem; color: #81ecec;">Wishing you the happiest year ahead!</p>
+    </div>
+
+  </div>
+
+  <script>
+    // Audio & Intro Trigger
+    function startExperience() {
+      document.getElementById('introScreen').classList.add('hidden');
+      const music = document.getElementById('bgMusic');
+      music.play().catch(err => console.log("Audio play blocked", err));
+      triggerConfetti();
+      initFireworks();
+    }
+
+    // Gift Opening & Burst
+    function openGift() {
+      const gift = document.getElementById('giftBox');
+      gift.classList.add('open');
+      triggerConfetti();
+    }
+
+    // Balloon Burst
+    function popBalloon(el) {
+      el.classList.add('popped');
+      triggerConfetti();
+    }
+
+    // Confetti Cannon
+    function triggerConfetti() {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+
+    // 2-Photo Slideshow Loop
+    const slides = document.querySelectorAll('.slide-img');
+    let currentSlide = 0;
+    setInterval(() => {
+      slides[currentSlide].classList.remove('active');
+      currentSlide = (currentSlide + 1) % slides.length;
+      slides[currentSlide].classList.add('active');
+    }, 3500);
+
+    // Rose Petals Canvas Animation
+    const pCanvas = document.getElementById('petalCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    let petals = [];
+
+    function resizePetalCanvas() {
+      pCanvas.width = window.innerWidth;
+      pCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizePetalCanvas);
+    resizePetalCanvas();
+
+    class Petal {
+      constructor() {
+        this.x = Math.random() * pCanvas.width;
+        this.y = Math.random() * pCanvas.height - pCanvas.height;
+        this.size = Math.random() * 8 + 6;
+        this.speedY = Math.random() * 1.5 + 1;
+        this.speedX = Math.random() * 1 - 0.5;
+        this.color = '#ff7675';
+      }
+      update() {
+        this.y += this.speedY;
+        this.x += this.speedX;
+        if (this.y > pCanvas.height) {
+          this.y = -10;
+          this.x = Math.random() * pCanvas.width;
+        }
+      }
+      draw() {
+        pCtx.beginPath();
+        pCtx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+        pCtx.fillStyle = this.color;
+        pCtx.globalAlpha = 0.6;
+        pCtx.fill();
+      }
+    }
+
+    for (let i = 0; i < 35; i++) petals.push(new Petal());
+
+    function animatePetals() {
+      pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+      petals.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animatePetals);
+    }
+    animatePetals();
+
+    // Subtle Fireworks Effect
+    const fCanvas = document.getElementById('fireworksCanvas');
+    const fCtx = fCanvas.getContext('2d');
+    
+    function initFireworks() {
+      fCanvas.width = window.innerWidth;
+      fCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', initFireworks);
+  </script>
+</body>
+</html>
